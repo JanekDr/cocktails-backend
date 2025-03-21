@@ -1,3 +1,4 @@
+from urllib import request
 from rest_framework import serializers
 from .models import Cocktail, Ingredient, CocktailIngredient
 
@@ -11,11 +12,9 @@ class CocktailSerializer(serializers.ModelSerializer):
             'instruction',
             'glass',
             'alcoholic',
-            'created_at',
-            'updated_at',
         ]
 
-        read_only_fields = ['id', 'created_at', 'updated_at']
+        read_only_fields = ['id']
 
 
 class IngredientSerializer(serializers.ModelSerializer):
@@ -27,14 +26,20 @@ class IngredientSerializer(serializers.ModelSerializer):
             'description',
             'alcoholic',
             'type',
+            'percentage',
             'image'
         ]
 
-        read_only_fields = ['id', 'created_at', 'updated_at']
+        read_only_fields = ['id']
+
+    def get_image(self, obj):
+        if obj.image:
+            return request.build_absolute_uri(obj.image.url)
+        return None
 
 
 class CocktailIngredientSerializer(serializers.ModelSerializer):
-    ingredient = IngredientSerializer()
+    ingredient = serializers.PrimaryKeyRelatedField(queryset=Ingredient.objects.all())
 
     class Meta:
         model = CocktailIngredient
@@ -58,9 +63,35 @@ class CocktailDetailSerializer(serializers.ModelSerializer):
             'instruction',
             'glass',
             'alcoholic',
-            'created_at',
-            'updated_at',
-            'cocktail_ingredients'
+            'cocktail_ingredients',
+            'alcohol_strength'
         ]
+    
+    def create(self, validated_data):
+        ingredients_data = validated_data.pop('cocktail_ingredients', [])
+        cocktail = Cocktail.objects.create(**validated_data)  
 
-        read_only_fields = ['id', 'created_at', 'updated_at']
+        for ingredient_data in ingredients_data:
+            ingredient = ingredient_data.pop('ingredient')
+            CocktailIngredient.objects.create(cocktail=cocktail, ingredient=ingredient, **ingredient_data)
+
+        return cocktail
+    
+    def update(self, instance, validated_data):
+        ingredients_data = validated_data.pop('cocktail_ingredients', None)
+
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+
+        if ingredients_data is not None:
+            instance.cocktail_ingredients.all().delete()
+            for ingredient_data in ingredients_data:
+                ingredient = ingredient_data.pop('ingredient')
+                CocktailIngredient.objects.create(
+                    cocktail=instance,
+                    ingredient=ingredient,
+                    **ingredient_data
+                )
+
+        return instance
