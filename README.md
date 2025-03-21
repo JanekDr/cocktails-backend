@@ -25,6 +25,16 @@ python manage.py runserver
 ```
 
 ---
+## 💻 Baza danych
+Przykładowy widok bazy danych z tabelami:
+
+- `cocktails`
+- `ingredients`
+- `cocktail_ingredients`
+
+![cocktailsDB](https://github.com/user-attachments/assets/524dc1bf-ff81-4fa0-9040-d8781756694f)
+
+---
 
 ## 📃 Endpointy
 
